@@ -24,16 +24,26 @@ class api(object):
     def __objectify(d):
         # this method fixes broken json data types in reponse data ie: float values returning strings etc..
         if isinstance(d, dict):
+            ret = {}
             for x, y in d.iteritems():
                 if isinstance(y, (str, unicode)) and (y.isdigit() or y.replace(".", "").isdigit()):
                     y = float(y)
-                d[x] = y
-        if isinstance(d, (str, unicode)):
+                if isinstance(x, (str, unicode)) and (x.isdigit() or x.replace(".", "").isdigit()):
+                    x = float(x)
+                ret[x] = y
+        elif isinstance(d, (str, unicode)):
             if d.lower() == "true":
-                d = True
+                ret = True
             elif d.lower() == "false":
-                d = False
-        return d
+                ret = False
+        else:
+            ret = d
+        return ret
+        
+    @staticmethod
+    def __stringify(d):
+        if isinstance(d, (int, float)):
+            return "%.8f" % d
         
     def markets(self):
         markets = self.__query("/markets", False, "get")
@@ -42,6 +52,9 @@ class api(object):
         
     def orders(self, market):
         orders = self.__query("/orders/%s" % market, False, "get")
+        for k in ["sell", "buy"]:
+            if not len(orders[k]):
+                orders[k] = {}
         return {x: self.__objectify(y) for x, y in orders.iteritems()}
         
     def ticker(self, market):
@@ -51,9 +64,13 @@ class api(object):
         return [self.__objectify(x) for x in self.__query("/history/%s" % market, False, "get")]
         
     def buyorder(self, market, quantity, price):
+        quantity = self.__stringify(quantity)
+        price = self.__stringify(price)
         return self.__objectify(self.__query("/order/buy", True, "post", market=market, quantity=quantity, price=price))
     
     def sellorder(self, market, quantity, price):
+        quantity = self.__stringify(quantity)
+        price = self.__stringify(price)
         return self.__objectify(self.__query("/order/sell", True, "post", market=market, quantity=quantity, price=price))
     
     def cancelorder(self, uuid):
