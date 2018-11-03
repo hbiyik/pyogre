@@ -36,6 +36,8 @@ class api(object):
                 ret = True
             elif d.lower() == "false":
                 ret = False
+            else:
+                ret = d
         else:
             ret = d
         return ret
@@ -53,7 +55,7 @@ class api(object):
     def orders(self, market):
         orders = self.__query("/orders/%s" % market, False, "get")
         for k in ["sell", "buy"]:
-            if not len(orders[k]):
+            if not k in orders or not len(orders[k]):
                 orders[k] = {}
         return {x: self.__objectify(y) for x, y in orders.iteritems()}
         
